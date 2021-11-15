@@ -1,7 +1,13 @@
 function Get-GraphQLVariableList {
+    <#
+        .SYNOPSIS
+            Does a thing.
+        .DESCRIPTION
+            Does a thing with more detail.
+    #>
     [CmdletBinding()]
-    [Alias('ggqlvc')]
-    [OutputType([GraphQLVariable])]
+    [Alias('ggqlvl')]
+    [OutputType([GraphQLVariable], [System.Collections.Hashtable])]
     <##>
     Param
     (
@@ -13,9 +19,9 @@ function Get-GraphQLVariableList {
     )
     BEGIN {
         class GraphQLVariable {
-            [string]$Query = ""
-            [string]$Parameter = ""
-            [string]$Type = ""
+            [string]$Query
+            [string]$Parameter
+            [string]$Type
         }
     }
     PROCESS {
@@ -37,7 +43,7 @@ function Get-GraphQLVariableList {
                 $queryName = $firstLine.Split(" ")[1].Trim()
             }
             else {
-                $queryName = $firstLine.Split("\(").Split(" ")[1].Trim()
+                $queryName = $($firstLine.Split("(")[0].Split(" ")[1]).Trim()
             }
         }
         catch {
@@ -54,7 +60,7 @@ function Get-GraphQLVariableList {
         $paranRegex = [RegEx]"\((.*)\)"
         $nonAlphaNumericRegex = [RegEx]"[^a-zA-Z0-9]"
 
-        $results = [Collections.Generic.List[GraphQLVariable]]::new()
+        $results = [List[GraphQLVariable]]::new()
         try {
             $((([RegEx]::Match($firstLine, $paranRegex).Groups[1]).Value -split ",").Trim()) | ForEach-Object {
                 $param = [RegEx]::Replace(($_.Split(":")[0].Trim()), $nonAlphaNumericRegex, "")
