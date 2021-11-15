@@ -1,7 +1,7 @@
-function Get-GraphQLVariableCollection {
+function Get-GraphQLVariableList {
     [CmdletBinding()]
     [Alias('ggqlvc')]
-    [OutputType([GraphQLVariableCollection])]
+    [OutputType([GraphQLVariable])]
     <##>
     Param
     (
@@ -12,7 +12,7 @@ function Get-GraphQLVariableCollection {
         [Parameter(Mandatory = $false, Position = 1)][Switch]$AsHashtable
     )
     BEGIN {
-        class GraphQLVariableCollection {
+        class GraphQLVariable {
             [string]$Query = ""
             [string]$Parameter = ""
             [string]$Type = ""
@@ -54,21 +54,21 @@ function Get-GraphQLVariableCollection {
         $paranRegex = [RegEx]"\((.*)\)"
         $nonAlphaNumericRegex = [RegEx]"[^a-zA-Z0-9]"
 
-        $results = @()
+        $results = [Collections.Generic.List[GraphQLVariable]]::new()
         try {
             $((([RegEx]::Match($firstLine, $paranRegex).Groups[1]).Value -split ",").Trim()) | ForEach-Object {
                 $param = [RegEx]::Replace(($_.Split(":")[0].Trim()), $nonAlphaNumericRegex, "")
                 $paramType = [RegEx]::Replace(($_.Split(":")[1].Trim()), $nonAlphaNumericRegex, "")
 
-                $gqlvc = [GraphQLVariableCollection]::new()
+                $gqlvc = [GraphQLVariable]::new()
                 $gqlvc.Query = $queryName
                 $gqlvc.Parameter = $param
                 $gqlvc.Type = $paramType
-                $results += $gqlvc
+                $results.Add($gqlvc)
             }
         }
         catch {
-            $gqlvc = [GraphQLVariableCollection]::new()
+            $gqlvc = [GraphQLVariable]::new()
             $gqlvc.Query = $queryName
             $results += $gqlvc
         }
