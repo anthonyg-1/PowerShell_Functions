@@ -25,9 +25,6 @@ function Get-GraphQLVariableCollection {
 
         $firstLine = $Query -split "`r`n" | Select-Object -First 1
 
-        $paranRegex = [RegEx]"\((.*)\)"
-        $nonAlphaNumericRegex = [RegEx]"[^a-zA-Z0-9]"
-
         # Determine query name by determining if query has parameters or not:
         [string]$queryName = ""
         if (($firstLine -split " ")[1] -notmatch "\(") {
@@ -36,6 +33,9 @@ function Get-GraphQLVariableCollection {
         else {
             $queryName = $firstLine.Split("\(").Split(" ")[1].Trim()
         }
+
+        $paranRegex = [RegEx]"\((.*)\)"
+        $nonAlphaNumericRegex = [RegEx]"[^a-zA-Z0-9]"
 
         try {
             $((([RegEx]::Match($firstLine, $paranRegex).Groups[1]).Value -split ",").Trim()) | ForEach-Object {
