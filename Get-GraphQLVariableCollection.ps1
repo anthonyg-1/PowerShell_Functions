@@ -26,20 +26,32 @@ function Get-GraphQLVariableCollection {
         $firstLine = $Query -split "`r`n" | Select-Object -First 1
 
         $paranRegex = [RegEx]"\((.*)\)"
-        $queryRegex = [RegEx]"^.*\(\s*"
         $nonAlphaNumericRegex = [RegEx]"[^a-zA-Z0-9]"
 
-        $queryName = ([RegEx]::Match($firstLine, $queryRegex).Groups[0].Value -replace "\(", "").Split(" ")[1]
+        # Determine query name by determining if query has parameters or not:
+        [string]$queryName = ""
+        if (($firstLine -split " ")[1] -notmatch "\(") {
+            $queryName = $firstLine.Split(" ")[1].Trim()
+        }
+        else {
+            $queryName = $firstLine.Split("\(").Split(" ")[1].Trim()
+        }
 
-        (([RegEx]::Match($firstLine, $paranRegex).Groups[1]).Value -split ",").Trim() | ForEach-Object {
-            $param = [RegEx]::Replace(($_.Split(":")[0].Trim()), $nonAlphaNumericRegex, "")
-            $paramType = [RegEx]::Replace(($_.Split(":")[1].Trim()), $nonAlphaNumericRegex, "")
+        try {
+            $((([RegEx]::Match($firstLine, $paranRegex).Groups[1]).Value -split ",").Trim()) | ForEach-Object {
+                $param = [RegEx]::Replace(($_.Split(":")[0].Trim()), $nonAlphaNumericRegex, "")
+                $paramType = [RegEx]::Replace(($_.Split(":")[1].Trim()), $nonAlphaNumericRegex, "")
 
+                $gqlvc = [GraphQLVariableCollection]::new()
+                $gqlvc.Query = $queryName
+                $gqlvc.Parameter = $param
+                $gqlvc.Type = $paramType
+                $results += $gqlvc
+            }
+        }
+        catch {
             $gqlvc = [GraphQLVariableCollection]::new()
             $gqlvc.Query = $queryName
-            $gqlvc.Parameter = $param
-            $gqlvc.Type = $paramType
-
             $results += $gqlvc
         }
 
