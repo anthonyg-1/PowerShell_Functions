@@ -28,53 +28,33 @@ function Get-GraphQLVariableList {
         # Exception to be used through the function in the case that an invalid GraphQL query or mutation is passed:
         $ArgumentException = New-Object -TypeName ArgumentException -ArgumentList "Not a valid GraphQL query or mutation. Verify syntax and try again."
 
-        # Attempt to determine if value passed to the query parameter is an actual GraphQL query or mutation. If not, throw.
-        [string]$trimmedQuery = $Query.Trim()
+        # Compress and trim the incoming query for all operations within this function:
+        [string]$cleanedQueryInput = Compress-String -InputString $Query
 
-        if (($trimmedQuery -notlike "query*") -and ($trimmedQuery -notlike "mutation*") ) {
+        # Attempt to determine if value passed to the query parameter is an actual GraphQL query or mutation. If not, throw:
+        if (($cleanedQueryInput -notlike "query*") -and ($cleanedQueryInput -notlike "mutation*") ) {
             Write-Error -Exception $ArgumentException -Category InvalidArgument -ErrorAction Stop
         }
 
-        # Get the first line of the incoming query or mutation as part of the process to determine the query or mutation name:
-        $firstLine = $trimmedQuery -split "`r`n" | Select-Object -First 1
-
-        # Determine query name by determining if query has parameters or not:
-        [string]$queryName = ""
-        [bool]$hasParameters = $false
-
-        try {
-            if (($firstLine -split " ")[1] -notmatch "\(") {
-                $queryName = $firstLine.Split(" ")[1].Trim()
-            }
-            else {
-                $queryName = $($firstLine.Split("(")[0].Split(" ")[1]).Trim()
-                $hasParameters = $true
-            }
-        }
-        catch {
-            Write-Error -Exception $ArgumentException -Category InvalidArgument -ErrorAction Stop
-        }
-
-        # Just to be extra safe determine that the query name value ascertained from the above isn't an empty string:
-        if ([string]::IsNullOrEmpty($queryName)) {
-            Write-Error -Exception $ArgumentException -Category InvalidArgument -ErrorAction Stop
-        }
-
+        # Get the query name via regex and splitting on the first space after query or mutation:
+        $matchOnParanOrCurlyRegex = '^[^\(|{]+'
+        $operationName = [regex]::Match(($cleanedQueryInput.Split(" ")[1]), $matchOnParanOrCurlyRegex) | Select-Object -ExpandProperty Value
 
         # List of objects that are returned by default:
         $results = [List[GraphQLVariable]]::new()
 
-        if ($hasParameters) {
-            # Run a regex against the first line looking for property name and type:
-            [string]$queryNameAndTypeRegex = "(?<=\$)[_A-Za-z][_0-9A-Za-z]*:[\s]*[A-Za-z][0-9A-Za-z]*(?=[\!]?[,\)])"
+        # Run a regex against the incoming query looking for property name and type:
+        [string]$queryNameAndTypeRegex = "(?<=\$)[_A-Za-z][_0-9A-Za-z]*:[\s]*[A-Za-z][0-9A-Za-z]*(?=[\!]?[,\)])"
+        $possibleMatches = [regex]::Matches($cleanedQueryInput, $queryNameAndTypeRegex)
 
-            [regex]::Matches($firstLine, $queryNameAndTypeRegex) |
-            Select-Object -ExpandProperty Value | ForEach-Object {
+        # If we get matches, add to results list. Else, return a single object in the list containing the operation name only:
+        if ($possibleMatches.Count -gt 0) {
+            $possibleMatches | Select-Object -ExpandProperty Value | ForEach-Object {
                 $parameterName = ($_.Split(":")[0]).Trim()
                 $parameterType = ($_.Split(":")[1]).Trim()
 
                 $gqlVariable = [GraphQLVariable]::new()
-                $gqlVariable.Operation = $queryName
+                $gqlVariable.Operation = $operationName
                 $gqlVariable.Parameter = $parameterName
                 $gqlVariable.Type = $parameterType
 
@@ -83,7 +63,7 @@ function Get-GraphQLVariableList {
         }
         else {
             $gqlVariable = [GraphQLVariable]::new()
-            $gqlVariable.Operation = $queryName
+            $gqlVariable.Operation = $operationName
             $results.Add($gqlVariable)
         }
 
@@ -92,6 +72,7 @@ function Get-GraphQLVariableList {
         # Else just returns the default collection of objects:
         if ($PSBoundParameters.ContainsKey("AsHashtable")) {
             $innerHashtable = @{ }
+
             $results | ForEach-Object {
                 if (-not($innerHashtable.ContainsKey($_.Parameter))) {
                     $innerHashtable.Add($_.Parameter, $_.Type)
