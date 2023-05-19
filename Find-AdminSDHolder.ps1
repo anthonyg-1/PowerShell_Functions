@@ -1,4 +1,4 @@
-#--------------------------------------------------BEGIN Find-AdminSDHolder.ps1--------------------------------------------------------------------
+#-------------------------------------------------- BEGIN Find-AdminSDHolder.ps1 --------------------------------------------------------------------
 Import-Module -Name ActiveDirectory -ErrorAction Stop
 
 $domainDN = Get-ADDomain | Select-Object -Expand DistinguishedName
@@ -21,14 +21,23 @@ Get-Acl -Path "AD:\CN=AdminSDHolder,CN=System,$domainDN" | Select-Object -Expand
     }
 }
 
+$groupMemberTable = @{}
+Get-ADGroup -Filter * -Properties Member | ForEach-Object {
+    $groupMemberTable.Add($_.Name, $_.Member)
+}
+
 # Class that will be used to represent the security principal and corresponding AD rights::
 class IdentityAcl {
     [string]$SecurityPrincipal
     [string[]]$ActiveDirectoryRights
+    [bool]$IsGroup
+    [string[]]$GroupMembers
 
-    IdentityAcl($prinName, $adRights) {
+    IdentityAcl($prinName, $adRights, $isAdGroup, $memberDNs) {
         $this.SecurityPrincipal = $prinName
         $this.ActiveDirectoryRights = $adRights
+        $this.IsGroup = $isAdGroup
+        $this.GroupMembers = $memberDNs
     }
 }
 
@@ -36,7 +45,24 @@ class IdentityAcl {
 # with the identity as the SecurityPrincipal property and remove duplicate values for AD rights and
 # assign to the ActiveDirectoryRights property:
 $identityAcls = $idMap.GetEnumerator() | ForEach-Object {
-    [IdentityAcl]::new($_.Name.Value, ($_.Value | Select-Object -Unique).Trim())
+    $idFullName = $_.Name.Value
+    $idName = $idFullName.Replace(($env:USERDOMAIN + "\"), "")
+
+    $adRights = ($_.Value | Select-Object -Unique).Trim()
+
+    if ($groupMemberTable.ContainsKey($idName)) {
+        $groupMemberDNs = $groupMemberTable[$idName]
+
+        $groupMembers = @()
+        $groupMemberDNs | ForEach-Object {
+            $groupMembers += ($_.Split(",")[0].Replace("CN=", ""))
+        }
+
+        [IdentityAcl]::new($idFullName, $adRights, $true, $groupMembers)
+    }
+    else {
+        [IdentityAcl]::new($idFullName, $adRights, $false, $null)
+    }
 }
 
 # Using Compare-Object and Where-Object, determine if any of the AD rights on the incoming objects exist in the $targetAdRightsToAudit array:
@@ -50,4 +76,4 @@ $auditResults = $identityAcls | ForEach-Object {
 }
 
 $auditResults | Out-GridView -Title ("AdminSDHolders for $env:USERDNSDOMAIN")
-#----------------------------------------------------END Find-AdminSDHolder.ps1--------------------------------------------------------------------
+#---------------------------------------------------- END Find-AdminSDHolder.ps1 --------------------------------------------------------------------
