@@ -13,7 +13,7 @@ Get-Acl -Path "AD:\CN=AdminSDHolder,CN=System,$domainDN" | Select-Object -Expand
 
     $idRef = $_.IdentityReference
 
-    if (-not($idMap.Contains($idRef))) {
+    if (-not($idMap.ContainsKey($idRef))) {
         $idMap.Add($idRef, $adRights)
     }
     else {
