@@ -12,6 +12,11 @@ function Get-ADUserLastLogonDate {
             Position = 1)][String]$Server = $env:USERDNSDOMAIN
     )
     BEGIN {
+        $requiredModuleName = "ActiveDirectory"
+        if (-not(Get-Module -Name $requiredModuleName)) {
+            Import-Module -Name $requiredModuleName -ErrorAction Stop
+        }
+
         $domain = Get-ADDomain -Server $Server | Select-Object -ExpandProperty DNSRoot
     }
     PROCESS {
