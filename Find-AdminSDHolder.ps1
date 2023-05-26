@@ -13,16 +13,19 @@ Get-ADGroup -Filter * -Properties Member | ForEach-Object {
     $groupMemberTable.Add($_.Name, $_.Member)
 }
 
+#Query Schema for object types and their GUIDs
 $ObjectTypeGUID = @{}
-
 $GetADObjectParameter=@{
     SearchBase=(Get-ADRootDSE).SchemaNamingContext
     LDAPFilter='(SchemaIDGUID=*)'
     Properties=@("Name", "SchemaIDGUID")
 }
-
-Get-ADObject @GetADObjectParameter | ForEach-Object { $ObjectTypeGUID.Add(([GUID]$_.SchemaIDGUID),$_.Name) }
-
+Get-ADObject @GetADObjectParameter | ForEach-Object { 
+    If (! $ObjectTypeGUID.ContainsKey(([GUID]$_.SchemaIDGUID)))
+    {
+        $ObjectTypeGUID.Add(([GUID]$_.SchemaIDGUID),$_.Name) 
+    }  
+}
 
 $ADObjExtPar=@{
     SearchBase="CN=Extended-Rights,$((Get-ADRootDSE).ConfigurationNamingContext)"
@@ -30,7 +33,12 @@ $ADObjExtPar=@{
     Properties=@("Name", "RightsGUID")
 }
 
-Get-ADObject @ADObjExtPar |ForEach-Object { $ObjectTypeGUID.Add(([GUID]$_.RightsGUID),$_.Name) }
+Get-ADObject @ADObjExtPar |ForEach-Object { 
+    If (! $ObjectTypeGUID.ContainsKey(([GUID]$_.RightsGUID)))
+    {
+        $ObjectTypeGUID.Add(([GUID]$_.RightsGUID),$_.Name) 
+    }
+}
 
 
 # Class that will be used to represent the security principal and corresponding AD rights::
