@@ -39,73 +39,78 @@ class IdentityAcl {
     [bool]$IsGroup
     [string]$GroupMembers
     [string]$ActiveDirectoryRights
-    [string]$AttributeName
     [string]$InheritedObjectType
     [string]$InheritanceType
+    [string]$AttributeName
 
-    IdentityAcl($prinName, $isAdGroup, $memberDNs, $adRights,$attributeName,$inheritedObjectType,$inheritanceType) {
+    IdentityAcl($prinName, $isAdGroup, $memberDNs, $adRights,$inheritedObjectType,$inheritanceType,$attributeName) {
         $this.SecurityPrincipal = $prinName
         $this.IsGroup = $isAdGroup
         $this.GroupMembers = $memberDNs
         $this.ActiveDirectoryRights = $adRights
-        $this.AttributeName = $attributeName
         $this.InheritedObjectType = $inheritedObjectType
         $this.InheritanceType = $inheritanceType
+        $this.AttributeName = $attributeName
     }
 }
 
 $adRightsLabel = @{Label="ADRights";Expression={$PSItem.ActiveDirectoryRights -Split ', '}}
+$adRightsUIDLabel = @{Label="ADRightsUID";Expression={"{0}-{1}-{2}-{3}" -f $PSItem.IdentityReference,$PSItem.ActiveDirectoryRights, $PSItem.InheritedObjectType, $PSItem.InheritanceType}}
 
-$aclData = Get-Acl -Path "AD:\CN=AdminSDHolder,CN=System,$domainDN" | Select-Object -ExpandProperty Access
+$aclData = Get-Acl -Path "AD:\CN=AdminSDHolder,CN=System,$domainDN" | Select-Object -ExpandProperty Access | Select-Object -Property *, $adRightsLabel, $adRightsUIDLabel
 
 $auditResults = New-Object -TypeName System.Collections.Generic.List[IdentityAcl]
 
-$aclData  | ForEach-Object {
+$aclData | Group-Object -Property ADRightsUID | ForEach-Object {
 
-
-    [string]$idFullName = $_.IdentityReference
+    $firstACE = $_.Group[0]
+    [string]$idFullName = $firstACE.IdentityReference
     $idName = $idFullName.Replace(($env:USERDOMAIN + "\"), "")
     $idRefIsGroup = $groupMemberTable.ContainsKey($idName)
 
-    $adRights = $_ | Select-Object -Property $adRightsLabel | Select-Object -ExpandProperty ADRights | Select-Object -Unique
+    $adRights = $_.Group | Select-Object -ExpandProperty ADRights | Select-Object -Unique
     
     # Using Compare-Object and Where-Object, determine if any of the AD rights on the incoming objects exist in the $targetAdRightsToAudit array:
     [int]$aclCount = Compare-Object -ReferenceObject $targetAdRightsToAudit -DifferenceObject $adRights -IncludeEqual |
         Where-Object SideIndicator -eq "==" | Measure-Object | Select-Object -ExpandProperty Count
 
     if ($aclCount -ge 1) {
-
-        If ($ObjectTypeGUID.ContainsKey($_.ObjectType))
-        {
-            $attributeName = $ObjectTypeGUID.Item($_.ObjectType)
-        }
-        Else
-        {
-            If ($_.ObjectType -eq '00000000-0000-0000-0000-000000000000')
+        $attributeNameList = $_.Group | ForEach-Object {
+            If ($ObjectTypeGUID.ContainsKey($_.ObjectType))
             {
-                $attributeName = 'All Properties'
+                $attributeName = $ObjectTypeGUID.Item($_.ObjectType)
             }
             Else
             {
-                $attributeName = $_.ObjectType
+                If ($_.ObjectType -eq '00000000-0000-0000-0000-000000000000')
+                {
+                    $attributeName = 'All Properties'
+                }
+                Else
+                {
+                    $attributeName = $_.ObjectType
+                }
             }
+            Write-Output $attributeName
         }
 
-        If ($ObjectTypeGUID.ContainsKey($_.InheritedObjectType))
+        If ($ObjectTypeGUID.ContainsKey($firstACE.InheritedObjectType))
         {
-            $inheritedObjectType = $ObjectTypeGUID.Item($_.InheritedObjectType)
+            $inheritedObjectType = $ObjectTypeGUID.Item($firstACE.InheritedObjectType)
         }
         Else
         {
-            If ($_.InheritedObjectType -eq '00000000-0000-0000-0000-000000000000')
+            If ($firstACE.InheritedObjectType -eq '00000000-0000-0000-0000-000000000000')
             {
                 $inheritedObjectType = 'This Object'
             }
             Else
             {
-                $inheritedObjectType = $_.InheritedObjectType
+                $inheritedObjectType = $firstACE.InheritedObjectType
             }
         }        
+
+        $flattenedAttributes = $attributeNameList -join ', '
 
         if ($idRefIsGroup) {
             $groupMemberDNs = $groupMemberTable[$idName]
@@ -114,10 +119,10 @@ $aclData  | ForEach-Object {
             $groupMemberDNs | ForEach-Object {
                 $groupMembers += ($_.Split(",")[0].Replace("CN=", ""))
             }
-            $auditResults.add([IdentityAcl]::new($idFullName, $true, ($groupMembers -join ", "), $_.ActiveDirectoryRights,$attributeName,$inheritedObjectType,$_.InheritanceType))
+            $auditResults.add([IdentityAcl]::new($idFullName, $true, ($groupMembers -join ", "), $firstACE.ActiveDirectoryRights,$inheritedObjectType,$firstACE.InheritanceType,$flattenedAttributes))
         }
         else {
-            $auditResults.add([IdentityAcl]::new($idFullName, $false, $null, $_.ActiveDirectoryRights,$attributeName,$inheritedObjectType,$_.InheritanceType))
+            $auditResults.add([IdentityAcl]::new($idFullName, $false, $null, $firstACE.ActiveDirectoryRights,$inheritedObjectType,$firstACE.InheritanceType,$flattenedAttributes))
         }
 
     }
