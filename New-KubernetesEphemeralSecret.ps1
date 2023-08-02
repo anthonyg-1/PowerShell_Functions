@@ -112,7 +112,7 @@ function New-KubernetesEphemeralSecret {
 
             [PSCustomObject]$secretGetResult = $(kubectl get secrets --namespace=$Namespace $SecretName --output=json 2>&1) | ConvertFrom-Json -ErrorAction Stop
 
-            $deserializedOutput = [PSCustomObject]@{
+            $deserializedGetOutput = [PSCustomObject]@{
                 Name      = $secretGetResult.metadata.name
                 Type      = $secretGetResult.type
                 DataCount = ($secretGetResult.data | Get-Member | Where-Object -Property MemberType -eq NoteProperty | Measure-Object | Select-Object -ExpandProperty Count)
@@ -120,7 +120,7 @@ function New-KubernetesEphemeralSecret {
                 CreatedOn = $secretGetResult.metadata.creationTimestamp
             }
 
-            Write-Output -InputObject $deserializedOutput
+            Write-Output -InputObject $deserializedGetOutput
 
         }
         catch {
