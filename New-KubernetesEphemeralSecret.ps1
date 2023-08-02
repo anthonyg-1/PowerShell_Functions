@@ -48,12 +48,12 @@ function New-KubernetesEphemeralSecret {
         $secretValue = 'A4458fcaT334f46c4bE4d46R564220b3bTb3'
         $secretDataValue = $secretValue | ConvertTo-SecureString -AsPlainText -Force
         $secretDataCred = New-Object -TypeName PSCredential -ArgumentList $secretDataName, $secretDataValue
-        New-KubernetesEphemeralSecret -Namespace "apps" -SecretName "my-password" -SecretData $secretDataCred
+        nkes -n apps -s "my-secret" -d $secretDataCred
 
         NAME          TYPE     DATA   AGE
         my-password   Opaque   1      0s
 
-        nkes -n apps -s "my-secret" -d $secretDataCred
+        Creates a Kubernetes secret in the apps namespace with a name of 'my-password' with a key of 'mypassword' and a value of 'A4458fcaT334f46c4bE4d46R564220b3bTb3'.
 #>
     [CmdletBinding()]
     [Alias('nkes', 'nk8ss')]
