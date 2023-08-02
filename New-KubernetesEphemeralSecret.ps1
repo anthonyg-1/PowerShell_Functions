@@ -112,12 +112,13 @@ function New-KubernetesEphemeralSecret {
 
             # Parse kubectl get... in order to return an object to the pipeline:
             [PSCustomObject]$secretGetResult = $(kubectl get secrets --namespace=$Namespace $SecretName --output=json 2>&1) | ConvertFrom-Json -ErrorAction Stop
+            $dataKeys = $secretGetResult.data | Get-Member | Where-Object -Property MemberType -eq NoteProperty | Select-Object -ExpandProperty Name
             $deserializedGetOutput = [PSCustomObject]@{
                 Name      = $secretGetResult.metadata.name
                 Namespace = $secretGetResult.metadata.namespace
                 Type      = $secretGetResult.type
-                DataCount = ($secretGetResult.data | Get-Member | Where-Object -Property MemberType -eq NoteProperty | Measure-Object | Select-Object -ExpandProperty Count)
-                DataKeys  = ($secretGetResult.data | Get-Member | Where-Object -Property MemberType -eq NoteProperty | Select-Object -ExpandProperty Name)
+                DataCount = $dataKeys.Count
+                DataKeys  = $dataKeys
                 CreatedOn = $secretGetResult.metadata.creationTimestamp
             }
 
