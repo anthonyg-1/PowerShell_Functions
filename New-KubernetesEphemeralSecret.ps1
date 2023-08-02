@@ -122,7 +122,6 @@ function New-KubernetesEphemeralSecret {
             }
 
             Write-Output -InputObject $deserializedGetOutput
-
         }
         catch {
             $ArgumentException = [ArgumentException]::new("Unable to create secret in the $Namespace namespace.")
