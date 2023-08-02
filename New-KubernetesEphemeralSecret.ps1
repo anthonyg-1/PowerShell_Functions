@@ -56,7 +56,7 @@ function New-KubernetesEphemeralSecret {
         Creates a Kubernetes secret in the apps namespace with a name of 'my-password' with a key of 'mypassword' and a value of 'A4458fcaT334f46c4bE4d46R564220b3bTb3'.
 #>
     [CmdletBinding()]
-    [Alias('nkes', 'nk8ss')]
+    [Alias('nkes')]
     [OutputType([void])]
     Param
     (
