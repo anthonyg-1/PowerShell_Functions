@@ -17,9 +17,6 @@ function Set-KubernetesSecretValue {
         $secretDataCred = New-Object -TypeName PSCredential -ArgumentList $secretDataName, $secretDataValue
         Set-KubernetesSecretValue  -SecretName "my-secret" -SecretData $secretDataCred
 
-        NAME        TYPE     DATA   AGE
-        my-secret   Opaque   1      1s
-
         Sets a Kubernetes secret in the default namespace with a name of 'my-secret' with a key of 'myapikey' and a value of '2@GaImh59O3C8!TMwLSf$gVrjsuiDZAEveKxkd'.
     .EXAMPLE
         $secretDataName = "mypassword"
@@ -27,9 +24,6 @@ function Set-KubernetesSecretValue {
         $secretDataValue = $secretValue | ConvertTo-SecureString -AsPlainText -Force
         $secretDataCred = New-Object -TypeName PSCredential -ArgumentList $secretDataName, $secretDataValue
         Set-KubernetesSecretValue -Namespace "apps" -SecretName "my-password" -SecretData $secretDataCred
-
-        NAME          TYPE     DATA   AGE
-        my-password   Opaque   1      0s
 
         Sets a Kubernetes secret in the apps namespace with a name of 'my-password' with a key of 'mypassword' and a value of 'IUrwnq8ZNbWMF5eKSviL&3xf^z42to0V!haHAE'.
     .EXAMPLE
@@ -39,9 +33,6 @@ function Set-KubernetesSecretValue {
         $secretDataCred = New-Object -TypeName PSCredential -ArgumentList $secretDataName, $secretDataValue
         sksv -s "my-secret" -d $secretDataCred
 
-        NAME        TYPE     DATA   AGE
-        my-secret   Opaque   1      0s
-
         Sets a Kubernetes secret in the default namespace with a name of 'my-secret' with a key of 'myapikey' and a value of '2@GaImh59O3C8!TMwLSf$gVrjsuiDZAEveKxkd'.
     .EXAMPLE
         $secretDataName = "mypassword"
@@ -49,9 +40,6 @@ function Set-KubernetesSecretValue {
         $secretDataValue = $secretValue | ConvertTo-SecureString -AsPlainText -Force
         $secretDataCred = New-Object -TypeName PSCredential -ArgumentList $secretDataName, $secretDataValue
         sksv -n apps -s "my-secret" -d $secretDataCred
-
-        NAME          TYPE     DATA   AGE
-        my-password   Opaque   1      0s
 
         Sets a Kubernetes secret in the apps namespace with a name of 'my-password' with a key of 'mypassword' and a value of 'IUrwnq8ZNbWMF5eKSviL&3xf^z42to0V!haHAE'.
 #>
