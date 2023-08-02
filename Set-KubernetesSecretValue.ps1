@@ -80,7 +80,8 @@ function Set-KubernetesSecretValue {
     }
     PROCESS {
         if (-not($SecretName -in $allSecrets)) {
-            $ArgumentException = [ArgumentException]::new("The following secret was not found {0}:{1}" -f $Namespace, $SecretName)
+            $argExceptionMessage = "The following secret was not found {0}:{1}" -f $Namespace, $SecretName
+            $ArgumentException = [ArgumentException]::new($argExceptionMessage)
             Write-Error -Exception $ArgumentException -ErrorAction Stop
         }
 
