@@ -1,50 +1,50 @@
-function New-KubernetesEphemeralSecret {
+function Set-KubernetesSecretValue {
     <#
     .SYNOPSIS
-        Generates a Kubernetes secret.
+        Sets a Kubernetes secret value.
     .DESCRIPTION
-        Generates a "ephemeral" Kubernetes secret in that if an existing secret with the same name exists, it will be deleted and recreated.
+        Sets/updates a Kubernetes secret value for a generic secret.
     .PARAMETER Namespace
-        The Kubernetes namespace that the secret will be created in.
+        The Kubernetes namespace that secret resides in.
     .PARAMETER SecretName
         The name of the Kubernetes secret.
     .PARAMETER SecretData
         The data for the Kubernetes secret as a PSCredential where the UserName will be the key and the Password will be the secret value.
     .EXAMPLE
         $secretDataName = "myapikey"
-        $secretValue = '9eC29a57e584426E960dv3f84aa154c13fS$%m'
+        $secretValue = '2@GaImh59O3C8!TMwLSf$gVrjsuiDZAEveKxkd'
         $secretDataValue = $secretValue | ConvertTo-SecureString -AsPlainText -Force
         $secretDataCred = New-Object -TypeName PSCredential -ArgumentList $secretDataName, $secretDataValue
-        New-KubernetesEphemeralSecret -SecretName "my-secret" -SecretData $secretDataCred
+        Set-KubernetesSecretValue  -SecretName "my-secret" -SecretData $secretDataCred
 
-        Creates a Kubernetes secret in the default namespace with a name of 'my-secret' with a key of 'myapikey' and a value of '9eC29a57e584426E960dv3f84aa154c13fS$%m'.
+        Sets a Kubernetes secret in the default namespace with a name of 'my-secret' with a key of 'myapikey' and a value of '2@GaImh59O3C8!TMwLSf$gVrjsuiDZAEveKxkd'.
     .EXAMPLE
         $secretDataName = "mypassword"
-        $secretValue = 'A4458fcaT334f46c4bE4d46R564220b3bTb3'
+        $secretValue = 'IUrwnq8ZNbWMF5eKSviL&3xf^z42to0V!haHAE'
         $secretDataValue = $secretValue | ConvertTo-SecureString -AsPlainText -Force
         $secretDataCred = New-Object -TypeName PSCredential -ArgumentList $secretDataName, $secretDataValue
-        New-KubernetesEphemeralSecret -Namespace "apps" -SecretName "my-password" -SecretData $secretDataCred
+        Set-KubernetesSecretValue -Namespace "apps" -SecretName "my-password" -SecretData $secretDataCred
 
-        Creates a Kubernetes secret in the apps namespace with a name of 'my-password' with a key of 'mypassword' and a value of 'A4458fcaT334f46c4bE4d46R564220b3bTb3'.
+        Sets a Kubernetes secret in the apps namespace with a name of 'my-password' with a key of 'mypassword' and a value of 'IUrwnq8ZNbWMF5eKSviL&3xf^z42to0V!haHAE'.
     .EXAMPLE
         $secretDataName = "myapikey"
-        $secretValue = '9eC29a57e584426E960dv3f84aa154c13fS$%m'
+        $secretValue = '2@GaImh59O3C8!TMwLSf$gVrjsuiDZAEveKxkd'
         $secretDataValue = $secretValue | ConvertTo-SecureString -AsPlainText -Force
         $secretDataCred = New-Object -TypeName PSCredential -ArgumentList $secretDataName, $secretDataValue
-        nkes -s "my-secret" -d $secretDataCred
+        sksv -s "my-secret" -d $secretDataCred
 
-        Creates a Kubernetes secret in the default namespace with a name of 'my-secret' with a key of 'myapikey' and a value of '9eC29a57e584426E960dv3f84aa154c13fS$%m'.
+        Sets a Kubernetes secret in the default namespace with a name of 'my-secret' with a key of 'myapikey' and a value of '2@GaImh59O3C8!TMwLSf$gVrjsuiDZAEveKxkd'.
     .EXAMPLE
         $secretDataName = "mypassword"
-        $secretValue = 'A4458fcaT334f46c4bE4d46R564220b3bTb3'
+        $secretValue = 'IUrwnq8ZNbWMF5eKSviL&3xf^z42to0V!haHAE'
         $secretDataValue = $secretValue | ConvertTo-SecureString -AsPlainText -Force
         $secretDataCred = New-Object -TypeName PSCredential -ArgumentList $secretDataName, $secretDataValue
-        nkes -n apps -s "my-secret" -d $secretDataCred
+        sksv -n apps -s "my-secret" -d $secretDataCred
 
-        Creates a Kubernetes secret in the apps namespace with a name of 'my-password' with a key of 'mypassword' and a value of 'A4458fcaT334f46c4bE4d46R564220b3bTb3'.
+        Sets a Kubernetes secret in the apps namespace with a name of 'my-password' with a key of 'mypassword' and a value of 'IUrwnq8ZNbWMF5eKSviL&3xf^z42to0V!haHAE'.
 #>
     [CmdletBinding()]
-    [Alias('nkes')]
+    [Alias('sksv', 'sk8ss')]
     [OutputType([void])]
     Param
     (
@@ -61,7 +61,8 @@ function New-KubernetesEphemeralSecret {
             Get-Command -Name kubectl -ErrorAction Stop | Out-Null
         }
         catch {
-            [IO.FileNotFoundException]::new("Unable to find kubectl. Execution halted.")
+            $FileNotFoundException = [IO.FileNotFoundException]::new("Unable to find kubectl. Execution halted.")
+            Write-Error -Exception $FileNotFoundException -ErrorAction Stop
         }
 
         $allNamespaces = $(kubectl get namespaces --output=json | ConvertFrom-Json).items.metadata.name
@@ -72,30 +73,55 @@ function New-KubernetesEphemeralSecret {
             Write-Error -Exception $ArgumentException -ErrorAction Stop
         }
 
-        if ($(kubectl auth can-i create secret).ToLower() -ne "yes") {
-            $SecurityException = [Security.SecurityException]::new("Current context cannot create secrets within the $Namespace namespace.")
-            Write-Error -Exception $SecurityException -ErrorAction Stop
-        }
-
-        if ($(kubectl auth can-i delete secret).ToLower() -ne "yes") {
-            $SecurityException = [Security.SecurityException]::new("Current context cannot delete secrets within the $Namespace namespace.")
+        if ($(kubectl auth can-i update secret).ToLower() -ne "yes") {
+            $SecurityException = [Security.SecurityException]::new("Current context cannot set secret values within the $Namespace namespace.")
             Write-Error -Exception $SecurityException -ErrorAction Stop
         }
     }
     PROCESS {
-        if ($SecretName -in $allSecrets) {
-            $(kubectl delete secret --namespace=$Namespace $SecretName 2>&1) | Out-Null
+        if (-not($SecretName -in $allSecrets)) {
+            $argExceptionMessage = "The following secret was not found {0}:{1}" -f $Namespace, $SecretName
+            $ArgumentException = [ArgumentException]::new($argExceptionMessage)
+            Write-Error -Exception $ArgumentException -ErrorAction Stop
         }
 
         $secretKeyName = $SecretData.UserName
         $secretDataValue = $SecretData.GetNetworkCredential().Password
 
-        [PSCustomObject]$creationResult = $null
+        [string[]]$existingSecretDataKeys = ""
         try {
-            $creationResult = $(kubectl create secret generic --namespace=$Namespace $SecretName --from-literal=$secretKeyName=$secretDataValue --output=json 2>&1) | ConvertFrom-Json -ErrorAction Stop
+            $existingSecretDataKeys = (($(kubectl get secret -n $Namespace $SecretName --output=json 2>&1) |
+                    ConvertFrom-Json -ErrorAction Stop).data | Get-Member |
+                Where-Object -Property MemberType -eq "NoteProperty") |
+            Select-Object -ExpandProperty Name
+        }
+        catch {
+            $parseExceptionMessage = "Unable to parse kubectl output from the following secret: {1}:{2}" -f $Namespace, $SecretName
+            $ParseException = [Management.Automation.ParseException]::new($parseExceptionMessage)
+            Write-Error -Exception $ParseException -ErrorAction Stop
+        }
 
-            if ($creationResult.metadata.name -eq $SecretName) {
-                Write-Verbose -Message ("Created the following generic secret: {0}:{1}" -f $Namespace, $SecretName)
+        if (-not($secretKeyName -in $existingSecretDataKeys)) {
+            $argExceptionMessage = "The key '{0}' does not exist in the following secret: {1}:{2}" -f $secretKeyName, $Namespace, $SecretName
+            $ArgumentException = [ArgumentException]::new($argExceptionMessage)
+            Write-Error -Exception $ArgumentException -ErrorAction Stop
+        }
+
+        # Base64 encode the retrieved/generated secret, serialize hashtable to JSON and patch:
+        $encodedSecretValue = [Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($secretDataValue))
+
+        # Construct key value pairs and serialize to compressed JSON array for patch operation:
+        $patchData = @{op = "replace"
+            path          = "/data/$secretKeyName"
+            value         = $encodedSecretValue
+        } | ConvertTo-Json -AsArray -Compress
+
+        [PSCustomObject]$patchResult = $null
+        try {
+            $patchResult = $(kubectl patch secret -n $Namespace $SecretName --type='json' -p $patchData --output=json 2>&1) | ConvertFrom-Json -ErrorAction Stop
+
+            if ($patchResult.metadata.name -eq $SecretName) {
+                Write-Verbose -Message ("Updated the following generic secret: {0}:{1}" -f $Namespace, $SecretName)
             }
 
             # Parse kubectl get... in order to return an object to the pipeline:
@@ -113,7 +139,7 @@ function New-KubernetesEphemeralSecret {
             Write-Output -InputObject $deserializedGetOutput
         }
         catch {
-            $ArgumentException = [ArgumentException]::new("Unable to create secret in the $Namespace namespace.")
+            $ArgumentException = [ArgumentException]::new("Unable to update the following secret in the $Namespace namespace: $SecretName")
             Write-Error -Exception $ArgumentException -ErrorAction Stop
         }
     }
