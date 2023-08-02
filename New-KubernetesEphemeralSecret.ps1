@@ -110,7 +110,18 @@ function New-KubernetesEphemeralSecret {
                 Write-Verbose -Message ("Created the following generic secret: {0}:{1}" -f $Namespace, $SecretName)
             }
 
-            kubectl get secrets --namespace=$Namespace $SecretName
+            [PSCustomObject]$secretGetResult = $(kubectl get secrets --namespace=$Namespace $SecretName --output=json 2>&1) | ConvertFrom-Json -ErrorAction Stop
+
+            $deserializedOutput = [PSCustomObject]@{
+                Name      = $secretGetResult.metadata.name
+                Type      = $secretGetResult.type
+                DataCount = ($secretGetResult.data | Get-Member | Where-Object -Property MemberType -eq NoteProperty | Measure-Object | Select-Object -ExpandProperty Count)
+                DataKeys  = ($secretGetResult.data | Get-Member | Where-Object -Property MemberType -eq NoteProperty | Select-Object -ExpandProperty Name)
+                CreatedOn = $secretGetResult.metadata.creationTimestamp
+            }
+
+            Write-Output -InputObject $deserializedOutput
+
         }
         catch {
             $ArgumentException = [ArgumentException]::new("Unable to create secret in the $Namespace namespace.")
