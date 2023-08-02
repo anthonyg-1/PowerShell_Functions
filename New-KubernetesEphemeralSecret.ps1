@@ -110,8 +110,8 @@ function New-KubernetesEphemeralSecret {
                 Write-Verbose -Message ("Created the following generic secret: {0}:{1}" -f $Namespace, $SecretName)
             }
 
+            # Parse kubectl get... in order to return an object to the pipeline:
             [PSCustomObject]$secretGetResult = $(kubectl get secrets --namespace=$Namespace $SecretName --output=json 2>&1) | ConvertFrom-Json -ErrorAction Stop
-
             $deserializedGetOutput = [PSCustomObject]@{
                 Name      = $secretGetResult.metadata.name
                 Type      = $secretGetResult.type
