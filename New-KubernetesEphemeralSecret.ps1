@@ -17,9 +17,6 @@ function New-KubernetesEphemeralSecret {
         $secretDataCred = New-Object -TypeName PSCredential -ArgumentList $secretDataName, $secretDataValue
         New-KubernetesEphemeralSecret -SecretName "my-secret" -SecretData $secretDataCred
 
-        NAME        TYPE     DATA   AGE
-        my-secret   Opaque   1      1s
-
         Creates a Kubernetes secret in the default namespace with a name of 'my-secret' with a key of 'myapikey' and a value of '9eC29a57e584426E960dv3f84aa154c13fS$%m'.
     .EXAMPLE
         $secretDataName = "mypassword"
@@ -27,9 +24,6 @@ function New-KubernetesEphemeralSecret {
         $secretDataValue = $secretValue | ConvertTo-SecureString -AsPlainText -Force
         $secretDataCred = New-Object -TypeName PSCredential -ArgumentList $secretDataName, $secretDataValue
         New-KubernetesEphemeralSecret -Namespace "apps" -SecretName "my-password" -SecretData $secretDataCred
-
-        NAME          TYPE     DATA   AGE
-        my-password   Opaque   1      0s
 
         Creates a Kubernetes secret in the apps namespace with a name of 'my-password' with a key of 'mypassword' and a value of 'A4458fcaT334f46c4bE4d46R564220b3bTb3'.
     .EXAMPLE
@@ -39,9 +33,6 @@ function New-KubernetesEphemeralSecret {
         $secretDataCred = New-Object -TypeName PSCredential -ArgumentList $secretDataName, $secretDataValue
         nkes -s "my-secret" -d $secretDataCred
 
-        NAME        TYPE     DATA   AGE
-        my-secret   Opaque   1      0s
-
         Creates a Kubernetes secret in the default namespace with a name of 'my-secret' with a key of 'myapikey' and a value of '9eC29a57e584426E960dv3f84aa154c13fS$%m'.
     .EXAMPLE
         $secretDataName = "mypassword"
@@ -49,9 +40,6 @@ function New-KubernetesEphemeralSecret {
         $secretDataValue = $secretValue | ConvertTo-SecureString -AsPlainText -Force
         $secretDataCred = New-Object -TypeName PSCredential -ArgumentList $secretDataName, $secretDataValue
         nkes -n apps -s "my-secret" -d $secretDataCred
-
-        NAME          TYPE     DATA   AGE
-        my-password   Opaque   1      0s
 
         Creates a Kubernetes secret in the apps namespace with a name of 'my-password' with a key of 'mypassword' and a value of 'A4458fcaT334f46c4bE4d46R564220b3bTb3'.
 #>
