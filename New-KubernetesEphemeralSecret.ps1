@@ -85,12 +85,12 @@ function New-KubernetesEphemeralSecret {
         }
 
         if ($(kubectl auth can-i create secret).ToLower() -ne "yes") {
-            $SecurityException = [Security.SecurityException]::new("Current context cannot create secrets within the $Namespace namespace")
+            $SecurityException = [Security.SecurityException]::new("Current context cannot create secrets within the $Namespace namespace.")
             Write-Error -Exception $SecurityException -ErrorAction Stop
         }
 
         if ($(kubectl auth can-i delete secret).ToLower() -ne "yes") {
-            $SecurityException = [Security.SecurityException]::new("Current context cannot delete secrets within the $Namespace namespace")
+            $SecurityException = [Security.SecurityException]::new("Current context cannot delete secrets within the $Namespace namespace.")
             Write-Error -Exception $SecurityException -ErrorAction Stop
         }
     }
