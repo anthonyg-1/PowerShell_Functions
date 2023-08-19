@@ -29,7 +29,8 @@ function Get-ADUserLastLogonDate {
                 Get-ADUser -Identity $Identity -Server $_.HostName -Properties LastLogonDate, WhenCreated, PasswordLastSet
             }
         } | Sort-Object LastLogonDate -Descending |
-        Select-Object Name, @{Name = "LastLogon"; Expression = {
+        Select-Object Name,
+        @{Name = "LastLogon"; Expression = {
                 if ($null -eq $_.LastLogonDate) {
                     "Never"
                 }
@@ -37,6 +38,16 @@ function Get-ADUserLastLogonDate {
                     $_.LastLogonDate
                 }
             }
-        }, WhenCreated, PasswordLastSet, @{Name = "Domain"; Expression = { $domain } } -First 1
+        }, WhenCreated,
+        @{Name = "PasswordLastSet"; Expression = {
+                if ($null -eq $_.PasswordLastSet ) {
+                    "Never"
+                }
+                else {
+                    $_.PasswordLastSet
+                }
+            }
+        },
+        @{Name = "Domain"; Expression = { $domain } }, Enabled -First 1
     }
 }
