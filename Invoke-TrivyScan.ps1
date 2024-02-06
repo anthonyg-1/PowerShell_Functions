@@ -4,6 +4,7 @@ function Invoke-TrivyScan {
     [OutputType([PSCustomObject])]
     Param (
         [Parameter(Mandatory = $true,
+            ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true,
             Position = 0)][Alias('i')][String]$Image
     )
@@ -19,12 +20,12 @@ function Invoke-TrivyScan {
         }
     }
     PROCESS {
-        $trivyScanResults = trivy image -f json --severity "UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL" $Image | ConvertFrom-Json
+        $trivyScanResults = trivy image -f json --severity "UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL" $Image | ConvertFrom-Json -Depth 25
 
         $trivyScanResults.Results.Vulnerabilities |
-            Select-Object @{Name="Image";Expression={$Image}}, VulnerabilityID, Title, Description, Severity,
-                            PkgID, @{n = "CweIDs"; e = { $_.CweIDs -join ", " } }, PkgName, InstalledVersion,
-                            Status, @{n = "References"; e = { ($_.References -split ",") -join ", " } },
+            Select-Object @{Name = "Image"; Expression = { $Image } }, VulnerabilityID, Title, Description, Severity,
+                            PkgID, @{Name = "CweIDs"; Expression = { $_.CweIDs -join ", " } }, PkgName, InstalledVersion,
+                            Status, @{Name = "References"; Expression = { ($_.References -split ",") -join ", " } },
                             PublishedDate, LastModifiedDate, PrimaryURL
     }
 }
