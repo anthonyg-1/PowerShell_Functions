@@ -20,7 +20,7 @@ function Invoke-TrivyScan {
         }
     }
     PROCESS {
-        $trivyScanResults = trivy image -f json --severity "UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL" $Image | ConvertFrom-Json -Depth 25
+        $trivyScanResults = trivy image -f json --severity "UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL" $Image 2>$null | ConvertFrom-Json -Depth 25
 
         $trivyScanResults.Results.Vulnerabilities |
             Select-Object @{Name = "Image"; Expression = { $Image } }, VulnerabilityID, Title, Description, Severity,
