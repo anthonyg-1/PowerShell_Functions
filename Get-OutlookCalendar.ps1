@@ -1,5 +1,5 @@
 function Get-OutlookCalendar {
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName = 'Today')]
     [Alias('goc')]
     [OutputType([PSCustomObject])]
     Param
