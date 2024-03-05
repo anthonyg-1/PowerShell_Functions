@@ -17,13 +17,11 @@ function Get-OutlookCalendar {
             Position = 1)][Alias('end', 'e')][DateTime]$EndDate
     )
     BEGIN {
-        Add-Type -Assembly “Microsoft.Office.Interop.Outlook” | Out-Null
+        Add-Type -Assembly "Microsoft.Office.Interop.Outlook" | Out-Null
 
-
-
-        $olFolders = “Microsoft.Office.Interop.Outlook.OlDefaultFolders” -as [type]
+        $olFolders = "Microsoft.Office.Interop.Outlook.OlDefaultFolders" -as [type]
         $outlook = New-Object -ComObject Outlook.Application
-        $namespace = $outlook.GetNameSpace(“MAPI”)
+        $namespace = $outlook.GetNameSpace("MAPI")
         $folder = $namespace.getDefaultFolder($olFolders::olFolderCalendar)
     }
     PROCESS {
