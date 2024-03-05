@@ -1,3 +1,4 @@
+
 function Get-OutlookCalendar {
     [CmdletBinding(DefaultParameterSetName = 'Today')]
     [Alias('goc')]
@@ -55,15 +56,15 @@ function Get-OutlookCalendar {
         }
 
         [PSCustomObject]$filteredResult = $null
-        if ($PSBoundParameters.ContainsKey("Today")) {
+        if ($PSBoundParameters.ContainsKey("StartDate")) {
+            [DateTime]$adjustedEndDate = $EndDate.AddDays(1)
+            $filteredResult = $unfilteredResults | Where-Object { ($_.Start -ge $StartDate) -and ($_.End -le $adjustedEndDate) }
+        }
+        else {
             $calculatedStartTime = (get-date).Date
             $calculatedEndTime = ((get-date).AddDays(+1)).date
 
             $filteredResult = $unfilteredResults | Where-Object { ($_.Start -ge $calculatedStartTime) -and ($_.End -le $calculatedEndTime) }
-        }
-        else {
-            [DateTime]$adjustedEndDate = $EndDate.AddDays(1)
-            $filteredResult = $unfilteredResults | Where-Object { ($_.Start -ge $StartDate) -and ($_.End -le $adjustedEndDate) }
         }
 
         $sortedFilteredResult = $filteredResult | Sort-Object -Property Start
