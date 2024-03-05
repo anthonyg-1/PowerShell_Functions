@@ -27,11 +27,21 @@ function Get-OutlookCalendar {
     PROCESS {
         [PSCustomObject]$sortedFilteredResult = $null
 
+        $acceptanceTable = @{
+            2 = "Declined"
+            3 = "Accepted or Tentative"
+            5 = "None"
+        }
+
         $unfilteredResults = $folder.items | ForEach-Object {
             $item = $_
+
             $timeDelta = $item.End - $item.Start
+
             $Duration = @{Name = "Duration"; Expression = { $timeDelta } }
-            $item | Select-Object -Property Subject, Start, End, $Duration
+            $Response = @{Name = "Response"; Expression = { $acceptanceTable[$_.ResponseStatus] } }
+
+            $item | Select-Object -Property Subject, Start, End, $Duration, $Response
         }
 
         [PSCustomObject]$filteredResult = $null
