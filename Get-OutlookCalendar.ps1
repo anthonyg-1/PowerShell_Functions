@@ -1,4 +1,3 @@
-
 function Get-OutlookCalendar {
     [CmdletBinding(DefaultParameterSetName = 'Today')]
     [Alias('goc')]
