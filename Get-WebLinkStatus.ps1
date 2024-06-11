@@ -4,9 +4,9 @@ function Get-WebLinkStatus {
     [OutputType([PSCustomObject])]
     param (
         [Parameter(Mandatory = $true, Position = 0)][Alias('u')][Uri]$Uri,
-        [Parameter(Mandatory = $false, Position = 1)][Alias('d')][Int]$Depth = 2,
-        [Parameter(Mandatory = $false, Position = 2)][Alias("h")][Collections.Hashtable]$Headers,
-        [Collections.Hashtable]$Visited = @{}
+        [Parameter(Mandatory = $false, Position = 1)][Alias('d')][int]$Depth = 2,
+        [Parameter(Mandatory = $false, Position = 2)][Alias("h")][System.Collections.Hashtable]$Headers,
+        [hashtable]$Visited = @{}
     )
     BEGIN {
         if ($PSVersionTable.PSVersion.Major -lt 7) {
