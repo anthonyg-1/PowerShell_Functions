@@ -9,8 +9,8 @@ function Get-WebLinkStatus {
         [hashtable]$Visited = @{}
     )
     BEGIN {
-        if ($PSVersionTable.PSVersion.Major -lt 7) {
-            $ArgumentException = [ArgumentException]::new("This function requires PowerShell version 7.0 or higher")
+        if (($PSVersionTable.PSVersion.Major -lt 7) -and ($PSVersionTable.PSVersion.Minor -lt 4)) {
+            $ArgumentException = [ArgumentException]::new("This function requires PowerShell version 7.4.0 or higher")
             Write-Error -Exception $ArgumentException -ErrorAction Stop
         }
     }
@@ -24,13 +24,20 @@ function Get-WebLinkStatus {
 
         $Visited[$targetUri] = $true
 
-        $response = $null
+        $iwrParams = @{Uri       = $Uri
+            Method               = "Get"
+            UseBasicParsing      = $true
+            SkipCertificateCheck = $true
+            SkipHttpErrorCheck   = $true
+            ErrorAction          = "Stop"
+            AllowInsecureRedirect = $true
+        }
+
         if ($PSBoundParameters.ContainsKey("Headers")) {
-            $response = Invoke-WebRequest -Method Get -Uri $Uri -Headers $Headers -UseBasicParsing -SkipCertificateCheck -SkipHttpErrorCheck -ErrorAction Continue
+            $iwrParams.Add("Headers", $Headers)
         }
-        else {
-            $response = Invoke-WebRequest -Method Get -Uri $Uri -UseBasicParsing -SkipCertificateCheck -SkipHttpErrorCheck -ErrorAction Continue
-        }
+
+        $response = Invoke-WebRequest @iwrParams
 
         [PSCustomObject]@{
             Uri        = $targetUri
