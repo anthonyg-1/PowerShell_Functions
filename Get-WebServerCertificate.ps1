@@ -1,85 +1,88 @@
 function Get-WebServerCertificate([string]$TargetHost, [int]$Port = 443, [int]$Timeout = 30) {
-    [bool]$opensslFound = $null -ne (Get-Command -CommandType Application -Name "openssl" -ErrorAction SilentlyContinue)
 
     $cryptographicExceptionMessage = "Unable to establish TLS session with the following host: {0}." -f $TargetHost
     $CryptographicException = [System.Security.Cryptography.CryptographicException]::new($cryptographicExceptionMessage)
 
-    if ($opensslFound) {
-        # Build target host and part for connect argument for openssl:
-        $targetHostAndPort = "{0}:{1}" -f $TargetHost, $Port
+    $getCertScriptBlock = {
+        [System.Net.Sockets.TcpClient]$tcpClient = $null
+        [System.Net.Security.SslStream]$sslStream = $null
+        [System.Security.Cryptography.X509Certificates.X509Certificate2]$sslCert = $null
 
         try {
-            # Get the cert:
-            $openSslResult = "Q" | openssl s_client -connect $targetHostAndPort 2>$null
+            $tcpClient = [System.Net.Sockets.TcpClient]::new($using:TargetHost, $using:Port)
+            $callback = { param($certSender, $cert, $chain, $errors) return $true }
+            $sslStream = [System.Net.Security.SslStream]::new($tcpClient.GetStream(), $false, $callback)
 
-            # Parse the relevant base64 cert resulting from openssl:
-            $beginString = "BEGIN CERTIFICATE"
-            $endString = "END CERTIFICATE"
-            $base64CertString = (($openSslResult -join "").Split($beginString)[1].Split($endString)[0]).Replace("-", "")
+            $sslStream.AuthenticateAsClient($using:TargetHost)
 
-            # Convert the base64 string to a byte array to be fed to the X509Certificate2 constructor:
-            [byte[]]$certBytes = [System.Convert]::FromBase64String($base64CertString)
+            $sslCert = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($sslStream.RemoteCertificate)
 
-            # Instantiate the certificate from the deserialized byte array:
-            $tlsCert = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($certBytes)
+            if ($null -ne $sslStream) {
+                $sslStream.Close()
+                $sslStream.Dispose()
+            }
 
-            # return the TLS cert:
-            return $tlsCert
+            if ($null -ne $tcpClient) {
+                $tcpClient.Close()
+                $tcpClient.Dispose()
+            }
+
+            Write-Output -InputObject $sslCert
         }
         catch {
             throw $CryptographicException
         }
     }
+
+    $getCertJobResult = $null
+    try {
+        $certRetrievalJob = Start-Job -ScriptBlock $getCertScriptBlock
+
+        Wait-Job -Job $certRetrievalJob -Timeout $Timeout | Out-Null
+
+        if ((Get-Job -Id $certRetrievalJob.Id).State -ne "Failed") {
+            $getCertJobResult = Receive-Job -Job $certRetrievalJob
+        }
+
+        Remove-Job -Job $certRetrievalJob -Force
+    }
+    finally {
+        Get-Job | Where-Object -Property State -eq "Failed" | Remove-Job -Force | Out-Null
+    }
+
+    if ($null -ne $getCertJobResult) {
+        return $getCertJobResult
+    }
     else {
-        $getCertScriptBlock = {
-            [System.Net.Sockets.TcpClient]$tcpClient = $null
-            [System.Net.Security.SslStream]$sslStream = $null
-            [System.Security.Cryptography.X509Certificates.X509Certificate2]$sslCert = $null
+        [bool]$opensslFound = $null -ne (Get-Command -CommandType Application -Name "openssl" -ErrorAction SilentlyContinue)
+        if ($opensslFound) {
+            # Build target host and part for connect argument for openssl:
+            $targetHostAndPort = "{0}:{1}" -f $TargetHost, $Port
 
             try {
-                $tcpClient = [System.Net.Sockets.TcpClient]::new($using:TargetHost, $using:Port)
-                $callback = { param($certSender, $cert, $chain, $errors) return $true }
-                $sslStream = [System.Net.Security.SslStream]::new($tcpClient.GetStream(), $false, $callback)
+                # Cert object to be returned:
+                $tlsCert = $null
 
-                $sslStream.AuthenticateAsClient($using:TargetHost)
+                # Get the cert:
+                $openSslResult = "Q" | openssl s_client -connect $targetHostAndPort 2>$null
 
-                $sslCert = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($sslStream.RemoteCertificate)
+                # Parse the relevant base64 cert resulting from openssl:
+                $beginString = "BEGIN CERTIFICATE"
+                $endString = "END CERTIFICATE"
+                $base64CertString = (($openSslResult -join "").Split($beginString)[1].Split($endString)[0]).Replace("-", "")
 
-                if ($null -ne $sslStream) {
-                    $sslStream.Close()
-                    $sslStream.Dispose()
-                }
+                # Convert the base64 string to a byte array to be fed to the X509Certificate2 constructor:
+                [byte[]]$certBytes = [System.Convert]::FromBase64String($base64CertString)
 
-                if ($null -ne $tcpClient) {
-                    $tcpClient.Close()
-                    $tcpClient.Dispose()
-                }
+                # Instantiate the certificate from the deserialized byte array:
+                $tlsCert = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($certBytes)
 
-                Write-Output -InputObject $sslCert
+                # return the TLS cert:
+                return $tlsCert
             }
             catch {
                 throw $CryptographicException
             }
-        }
-
-        $getCertJobResult = $null
-        try {
-            $certRetrievalJob = Start-Job -ScriptBlock $getCertScriptBlock
-
-            Wait-Job -Job $certRetrievalJob -Timeout $Timeout | Out-Null
-
-            if ((Get-Job -Id $certRetrievalJob.Id).State -ne "Failed") {
-                $getCertJobResult = Receive-Job -Job $certRetrievalJob
-            }
-
-            Remove-Job -Job $certRetrievalJob -Force
-        }
-        finally {
-            Get-Job | Where-Object -Property State -eq "Failed" | Remove-Job -Force | Out-Null
-        }
-
-        if ($null -ne $getCertJobResult) {
-            return $getCertJobResult
         }
         else {
             throw $CryptographicException
