@@ -89,3 +89,18 @@ function Get-WebServerCertificate([string]$TargetHost, [int]$Port = 443, [int]$T
         }
     }
 }
+
+
+$ips = 21..33 | % { "155.49.240." + $_ }
+
+
+cls
+
+$ips | % {
+    try {
+        Get-WebServerCertificate -TargetHost $_
+    }
+    catch {
+
+    }
+}
