@@ -56,10 +56,12 @@ function Get-ADUserLastLogonDate {
         $targetUserRecords = [System.Collections.ArrayList]::new()
 
         $allDcs | ForEach-Object {
-            [bool]$canConnect = Test-TcpConnection -DNSHostName $_.Name -Port 9389 -Quiet
+            $domainController = $_.HostName
+
+            [bool]$canConnect = Test-TcpConnection -DNSHostName $domainController -Port 9389 -Quiet
 
             if ($canConnect) {
-                $targetUser = Get-ADUser -Identity $Identity -Server $_.HostName -Properties LastLogon, LastLogonDate, WhenCreated, PasswordLastSet
+                $targetUser = Get-ADUser -Identity $Identity -Server $domainController -Properties LastLogon, LastLogonDate, WhenCreated, PasswordLastSet
 
                 $latestLastLogon = $null
                 $lastLogon = Get-Date -Date $([DateTime]::FromFileTime($targetUser.LastLogon).ToString('MM/dd/yyyy hh:mm:ss tt'))
@@ -92,6 +94,10 @@ function Get-ADUserLastLogonDate {
                 }
 
                 $targetUserRecords.Add($targetUserRecord) | Out-Null
+            }
+            else {
+                $warningMessage = "Unable to connect to domain controller {0} over TCP port 9389. Last logon data may not be accurate as a result." -f $domainController
+                Write-Warning -Message $warningMessage
             }
         }
         $targetUserRecords | Sort-Object -Property LastLogonDetected -Descending | Select-Object -First 1
