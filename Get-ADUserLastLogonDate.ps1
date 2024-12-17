@@ -1,28 +1,28 @@
 function Get-ADUserLastLogonDate {
     <#
-.SYNOPSIS
-    Gets an Active Directory user's last logon date.
-.DESCRIPTION
-    Gets an Active Directory user's last logon date, password last set, when created, and other applicable account metadata.
-.EXAMPLE
-    Get-ADUserLastLogonDate $env:USERNAME
+    .SYNOPSIS
+        Gets an Active Directory user's last logon date.
+    .DESCRIPTION
+        Gets an Active Directory user's last logon date, password last set, when created, and other applicable account metadata.
+    .EXAMPLE
+        Get-ADUserLastLogonDate $env:USERNAME
 
-    Gets the logged-on user's last logon date from Active Directory.
-.EXAMPLE
-    Get-ADUser -Filter {Surname -eq "Smith"} | Get-ADUserLastLogonDate | Export-Csv -Path SmithLastLogons.csv -NoTypeInformation
+        Gets the logged-on user's last logon date from Active Directory.
+    .EXAMPLE
+        Get-ADUser -Filter {Surname -eq "Smith"} | Get-ADUserLastLogonDate | Export-Csv -Path SmithLastLogons.csv -NoTypeInformation
 
-    Gets all users from the Active Directory with a last name of "Smith" and generates a report of their last logon dates exported to a CSV file.
-.INPUTS
-    System.String
-        A string value is received by the Identity parameter.
-.OUTPUTS
-    PSCustomObject
-.NOTES
-    This function requires PowerShell 7 or above as well as the ActiveDirectory and PSTcpIp modules.
-.LINK
-    https://learn.microsoft.com/en-us/powershell/module/activedirectory/?view=windowsserver2025-ps
-    https://github.com/anthonyg-1/PSTcpIp/tree/main/PSTcpIp
-#>
+        Gets all users from the Active Directory with a last name of "Smith" and generates a report of their last logon dates exported to a CSV file.
+    .INPUTS
+        System.String
+            A string value is received by the Identity parameter.
+    .OUTPUTS
+        PSCustomObject
+    .NOTES
+        This function requires PowerShell 7 or above as well as the ActiveDirectory and PSTcpIp modules.
+    .LINK
+        https://learn.microsoft.com/en-us/powershell/module/activedirectory/?view=windowsserver2025-ps
+        https://github.com/anthonyg-1/PSTcpIp/tree/main/PSTcpIp
+    #>
     [CmdletBinding()]
     Param
     (
@@ -86,6 +86,7 @@ function Get-ADUserLastLogonDate {
                 $targetUserRecord = [PSCustomObject]@{
                     Name              = $targetUser.Name
                     SamAccountName    = $targetUser.SamAccountName
+                    DistinguishedName = $targetUser.DistinguishedName
                     LastLogonDetected = $latestLastLogon
                     WhenCreated       = $targetUser.WhenCreated
                     PasswordLastSet   = $passwordLastSet
