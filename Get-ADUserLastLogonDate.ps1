@@ -77,6 +77,10 @@ function Get-ADUserLastLogonDate {
                     $passwordLastSet = "Never"
                 }
 
+                if ($latestLastLogon -match "1600") {
+                    $latestLastLogon = "Never"
+                }
+
                 $targetUserRecord = [PSCustomObject]@{
                     Name              = $targetUser.Name
                     SamAccountName    = $targetUser.SamAccountName
