@@ -24,16 +24,17 @@ function Get-ADUserLastLogonDate {
         https://github.com/anthonyg-1/PSTcpIp/tree/main/PSTcpIp
     #>
     [CmdletBinding()]
+    [Alias('gll', 'gadull', 'gull')]
     Param
     (
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true,
-            Position = 0)][String]$Identity,
+            Position = 0)][Alias('i')][String]$Identity,
 
         [Parameter(Mandatory = $false,
             ValueFromPipelineByPropertyName = $false,
-            Position = 1)][String]$Server = $env:USERDNSDOMAIN
+            Position = 1)][Alias('Domain', 'd', 's')][String]$Server = $env:USERDNSDOMAIN
     )
     BEGIN {
         if (-not($PSVersionTable.PSVersion.Major -ge 7)) {
@@ -61,40 +62,55 @@ function Get-ADUserLastLogonDate {
             [bool]$canConnect = Test-TcpConnection -DNSHostName $domainController -Port 9389 -Quiet
 
             if ($canConnect) {
-                $targetUser = Get-ADUser -Identity $Identity -Server $domainController -Properties LastLogon, LastLogonDate, WhenCreated, PasswordLastSet
+                $targetUser = $null
 
-                $latestLastLogon = $null
-                $lastLogon = Get-Date -Date $([DateTime]::FromFileTime($targetUser.LastLogon).ToString('MM/dd/yyyy hh:mm:ss tt'))
-                $lastLogonDate = $targetUser.LastLogonDate
+                try {
+                    $targetUser = Get-ADUser -Identity $Identity -Server $domainController -Properties LastLogon, LastLogonDate, WhenCreated, PasswordLastSet -ErrorAction Stop
 
-                if ($lastLogon -ge $lastLogonDate) {
-                    $latestLastLogon = $lastLogon
+                    $latestLastLogon = $null
+                    $lastLogon = Get-Date -Date $([DateTime]::FromFileTime($targetUser.LastLogon).ToString('MM/dd/yyyy hh:mm:ss tt'))
+                    $lastLogonDate = $targetUser.LastLogonDate
+
+                    if ($lastLogon -ge $lastLogonDate) {
+                        $latestLastLogon = $lastLogon
+                    }
+                    else {
+                        $latestLastLogon = $lastLogonDate
+                    }
+
+                    $passwordLastSet = $targetUser.PasswordLastSet
+                    if ($null -eq $passwordLastSet ) {
+                        $passwordLastSet = "Never"
+                    }
+
+                    $detectedLastLogon = $null
+                    if (($null -eq $latestLastLogon) -or ($latestLastLogon.Year -eq 1600)) {
+                        $detectedLastLogon = "Never"
+                    }
+                    else {
+                        $detectedLastLogon = $latestLastLogon
+                    }
+
+                    if ($null -ne $targetUser) {
+                        $targetUserRecord = [PSCustomObject]@{
+                            Name              = $targetUser.Name
+                            SamAccountName    = $targetUser.SamAccountName
+                            DistinguishedName = $targetUser.DistinguishedName
+                            LastLogonDetected = $detectedLastLogon
+                            WhenCreated       = $targetUser.WhenCreated
+                            PasswordLastSet   = $passwordLastSet
+                            Domain            = $domain
+                            Enabled           = $targetUser.Enabled
+                        }
+
+                        $targetUserRecords.Add($targetUserRecord) | Out-Null
+                    }
                 }
-                else {
-                    $latestLastLogon = $lastLogonDate
+                catch {
+                    $exceptionMessage = "Cannot find an object with identity: {0}" -f $Identity
+                    $ArgumentException = New-Object -TypeName System.ArgumentException -ArgumentList $exceptionMessage
+                    Write-Error -Exception $ArgumentException -Category InvalidArgument -ErrorAction Continue
                 }
-
-                $passwordLastSet = $targetUser.PasswordLastSet
-                if ($null -eq $passwordLastSet ) {
-                    $passwordLastSet = "Never"
-                }
-
-                if ($latestLastLogon -match "1600") {
-                    $latestLastLogon = "Never"
-                }
-
-                $targetUserRecord = [PSCustomObject]@{
-                    Name              = $targetUser.Name
-                    SamAccountName    = $targetUser.SamAccountName
-                    DistinguishedName = $targetUser.DistinguishedName
-                    LastLogonDetected = $latestLastLogon
-                    WhenCreated       = $targetUser.WhenCreated
-                    PasswordLastSet   = $passwordLastSet
-                    Domain            = $domain
-                    Enabled           = $targetUser.Enabled
-                }
-
-                $targetUserRecords.Add($targetUserRecord) | Out-Null
             }
             else {
                 $warningMessage = "Unable to connect to domain controller {0} over TCP port 9389. Last logon data may not be accurate as a result." -f $domainController
