@@ -96,7 +96,7 @@ function Get-ADUserLastLogonDate {
                             Name              = $targetUser.Name
                             SamAccountName    = $targetUser.SamAccountName
                             DistinguishedName = $targetUser.DistinguishedName
-                            LastLogonDetected = $detectedLastLogon
+                            LastLogonDate = $detectedLastLogon
                             WhenCreated       = $targetUser.WhenCreated
                             PasswordLastSet   = $passwordLastSet
                             Domain            = $domain
