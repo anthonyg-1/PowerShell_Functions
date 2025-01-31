@@ -65,17 +65,23 @@ function Get-ADUserLastLogonDate {
                 $targetUser = $null
 
                 try {
-                    $targetUser = Get-ADUser -Identity $Identity -Server $domainController -Properties LastLogon, LastLogonDate, WhenCreated, PasswordLastSet -ErrorAction Stop
+                    $targetUser = Get-ADUser -Identity $Identity -Server $domainController -Properties LastLogon, LastLogonDate, WhenCreated, PasswordLastSet, PasswordExpired, msDS-LastSuccessfulInteractiveLogonTime -ErrorAction Stop
 
                     $latestLastLogon = $null
                     $lastLogon = Get-Date -Date $([DateTime]::FromFileTime($targetUser.LastLogon).ToString('MM/dd/yyyy hh:mm:ss tt'))
                     $lastLogonDate = $targetUser.LastLogonDate
+
+                    $ctrlAltDelLogonDate = Get-Date -Date $([DateTime]::FromFileTime($targetUser.'msDS-LastSuccessfulInteractiveLogonTime').ToString('MM/dd/yyyy hh:mm:ss tt'))
 
                     if ($lastLogon -ge $lastLogonDate) {
                         $latestLastLogon = $lastLogon
                     }
                     else {
                         $latestLastLogon = $lastLogonDate
+                    }
+
+                    if ($ctrlAltDelLogonDate -ge $latestLastLogon) {
+                        $latestLastLogon = $ctrlAltDelLogonDate
                     }
 
                     $passwordLastSet = $targetUser.PasswordLastSet
@@ -96,9 +102,10 @@ function Get-ADUserLastLogonDate {
                             Name              = $targetUser.Name
                             SamAccountName    = $targetUser.SamAccountName
                             DistinguishedName = $targetUser.DistinguishedName
-                            LastLogonDate = $detectedLastLogon
+                            LastLogonDate     = $detectedLastLogon
                             WhenCreated       = $targetUser.WhenCreated
                             PasswordLastSet   = $passwordLastSet
+                            PasswordExpired   = $targetUser.PasswordExpired
                             Domain            = $domain
                             Enabled           = $targetUser.Enabled
                         }
